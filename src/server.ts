@@ -24,18 +24,33 @@ app.post("/movies", async (req, res) => {
 
     const { title, genre_id, language_id, oscar_count, release_date } = req.body;
 
-    try{
-    await prisma.movie.create({
-        data: {
-            title,  // Essa e as propriedades abaixo ficariam title: title e assim por diante, quando são iguais podemos colocar somente uma, ficando assim como estamos vendo.
-            genre_id,
-            language_id,
-            oscar_count,
-            release_date: new Date(release_date)
+    try {
+
+        // verificando no bando se ja existe um filme com o mesmo nome que está sendo enviado
+        // case insensitive - se a busca for feita por jhon wick ou Jhon Wick ou JHON WICK, o registro vai ser retornado na consulta
+        // case sensitive - a diferenciação de escrita não vai ser resultado na consulta.
+
+        const movieWithSameTitle = await prisma.movie.findFirst({
+            where: {
+                title: { equals: title, mode: "insensitive" }
+            }
+        });
+
+        if (movieWithSameTitle) {
+            return res.status(409).send({ message: "Já existe um filme cadastrado com este título." })
         }
-    });
-    }catch(error){
-        return res.status(500).send({message: "Falha ao cadastrar um filme"})
+
+        await prisma.movie.create({
+            data: {
+                title,  // Essa e as propriedades abaixo ficariam title: title e assim por diante, quando são iguais podemos colocar somente uma, ficando assim como estamos vendo.
+                genre_id,
+                language_id,
+                oscar_count,
+                release_date: new Date(release_date)
+            }
+        });
+    } catch (error) {
+        return res.status(500).send({ message: "Falha ao cadastrar um filme" })
     }
 
     res.status(201).send();
